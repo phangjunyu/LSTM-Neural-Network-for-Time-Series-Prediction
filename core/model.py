@@ -4,7 +4,7 @@ import numpy as np
 import datetime as dt
 from numpy import newaxis
 from core.utils import Timer
-from keras.layers import Dense, Activation, Dropout, LSTM
+from keras.layers import Dense, Activation, Dropout, LSTM, Flatten
 from keras.models import Sequential, load_model
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 
@@ -36,9 +36,11 @@ class Model():
 				self.model.add(LSTM(neurons, input_shape=(input_timesteps, input_dim), return_sequences=return_seq))
 			if layer['type'] == 'dropout':
 				self.model.add(Dropout(dropout_rate))
+			if layer['type'] == 'flatten':
+				self.model.add(Flatten())
 
 		self.model.compile(loss=configs['model']['loss'], optimizer=configs['model']['optimizer'])
-
+		print(self.model.summary())
 		print('[Model] Model Compiled')
 		timer.stop()
 
@@ -47,8 +49,9 @@ class Model():
 		timer.start()
 		print('[Model] Training Started')
 		print('[Model] %s epochs, %s batch size' % (epochs, batch_size))
-		
-		save_fname = 'saved_models/%s-e%s.h5' % (dt.datetime.now().strftime('%d%m%Y-%H%M%S'), str(epochs))
+
+		# save_fname = 'saved_models/%s-e%s.h5' % (dt.datetime.now().strftime('%d%m%Y-%H%M%S'), str(epochs))
+		save_fname = 'saved_models/latest.h5'
 		callbacks = [
 			EarlyStopping(monitor='val_loss', patience=2),
 			ModelCheckpoint(filepath=save_fname, monitor='val_loss', save_best_only=True)
@@ -70,7 +73,7 @@ class Model():
 		timer.start()
 		print('[Model] Training Started')
 		print('[Model] %s epochs, %s batch size, %s batches per epoch' % (epochs, batch_size, steps_per_epoch))
-		
+
 		save_fname = 'saved_models/%s-e%s.h5' % (dt.datetime.now().strftime('%d%m%Y-%H%M%S'), str(epochs))
 		callbacks = [
 			ModelCheckpoint(filepath=save_fname, monitor='loss', save_best_only=True)
@@ -82,7 +85,7 @@ class Model():
 			callbacks=callbacks,
 			workers=1
 		)
-		
+
 		print('[Model] Training Completed. Model saved as %s' % save_fname)
 		timer.stop()
 

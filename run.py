@@ -11,6 +11,10 @@ import matplotlib.pyplot as plt
 from core.data_processor import DataLoader
 from core.model import Model
 
+import sys
+
+configs = json.load(open('config.json', 'r'))
+
 def plot_results(predicted_data, true_data):
     fig = plt.figure(facecolor='white')
     ax = fig.add_subplot(111)
@@ -30,55 +34,79 @@ def plot_results_multiple(predicted_data, true_data, prediction_len):
         plt.legend()
     plt.show()
 
-def main():
-	configs = json.load(open('config.json', 'r'))
+def main(choice):
+    data = DataLoader(
+        os.path.join('data', configs['data']['filename']),
+        configs['data']['train_test_split'],
+        configs['data']['columns']
+    )
+    model = Model()
+    model.build_model(configs)
+    if (choice != 'info'):
+        x, y = data.get_train_data(
+            seq_len = configs['data']['sequence_length'],
+            normalise = configs['data']['normalise']
+        )
 
-	data = DataLoader(
-		os.path.join('data', configs['data']['filename']),
-		configs['data']['train_test_split'],
-		configs['data']['columns']
-	)
 
-	model = Model()
-	model.build_model(configs)
-	x, y = data.get_train_data(
-		seq_len = configs['data']['sequence_length'],
-		normalise = configs['data']['normalise']
-	)
+        # in-memory training
+        model.train(
+        x,
+        y,
+        epochs = configs['training']['epochs'],
+        batch_size = configs['training']['batch_size']
+        )
 
-	'''
-	# in-memory training
-	model.train(
-		x,
-		y,
-		epochs = configs['training']['epochs'],
-		batch_size = configs['training']['batch_size']
-	)
-	'''
-	# out-of memory generative training
-	steps_per_epoch = math.ceil((data.len_train - configs['data']['sequence_length']) / configs['training']['batch_size'])
-	model.train_generator(
-		data_gen = data.generate_train_batch(
-			seq_len = configs['data']['sequence_length'],
-			batch_size = configs['training']['batch_size'],
-			normalise = configs['data']['normalise']
-		),
-		epochs = configs['training']['epochs'],
-		batch_size = configs['training']['batch_size'],
-		steps_per_epoch = steps_per_epoch
-	)
-	
-	x_test, y_test = data.get_test_data(
-		seq_len = configs['data']['sequence_length'],
-		normalise = configs['data']['normalise']
-	)
+        # out-of memory generative training
+        # steps_per_epoch = math.ceil((data.len_train - configs['data']['sequence_length']) / configs['training']['batch_size'])
+        # model.train_generator(
+        #     data_gen = data.generate_train_batch(
+        #         seq_len = configs['data']['sequence_length'],
+        #         batch_size = configs['training']['batch_size'],
+        #         normalise = configs['data']['normalise']
+        #     ),
+        #     epochs = configs['training']['epochs'],
+        #     batch_size = configs['training']['batch_size'],
+        #     steps_per_epoch = steps_per_epoch
+        # )
 
-	predictions = model.predict_sequences_multiple(x_test, configs['data']['sequence_length'], configs['data']['sequence_length'])
-	#predictions = model.predict_sequence_full(x_test, configs['data']['sequence_length'])
-	#predictions = model.predict_point_by_point(x_test)        
+        x_test, y_test = data.get_test_data(
+            seq_len = configs['data']['sequence_length'],
+            normalise = configs['data']['normalise']
+        )
 
-	plot_results_multiple(predictions, y_test, configs['data']['sequence_length'])
-	#plot_results(predictions, y_test)
+        if (choice == "multi"):
+            predictions=model.predict_sequences_multiple(x_test,configs['data']['sequence_length'],configs['data']['sequence_length'])
+            plot_results_multiple(predictions, y_test, configs['data']['sequence_length'])
+        elif (choice == "seq"):
+            predictions = model.predict_sequence_full(x_test, configs['data']['sequence_length'])
+            plot_results_multiple(predictions, y_test, configs['data']['sequence_length'])
+        else:
+            predictions = model.predict_point_by_point(x_test)
+            plot_results(predictions, y_test)
+
 
 if __name__=='__main__':
-	main()
+    # allows for multi, seq or point
+    choice = sys.argv[1]
+    if (choice == "multi" or choice == "seq" or choice == "point" or choice == "info"):
+        main(choice)
+    else:
+        print("Please input a choice: multi, seq, point, info")
+
+def predict(test):
+    # initialize dataLoader with split of 0
+    data = DataLoader(
+        test,
+        0,
+        configs['data']['columns']
+    )
+    x_test, y_test = data.get_test_data(
+        seq_len = configs['data']['sequence_length'],
+        normalise = configs['data']['normalise']
+    )
+    model = Model()
+    model.load_model('saved_models/latest.h5')
+    predictions = model.predict_point_by_point(x_test)
+    plot_results(predictions, y_test)
+    return "OK"
