@@ -4,7 +4,7 @@ import numpy as np
 import datetime as dt
 from numpy import newaxis
 from core.utils import Timer
-from keras.layers import Dense, Activation, Dropout, LSTM, Flatten
+from keras.layers import Dense, Activation, Dropout, LSTM, Flatten, TimeDistributed
 from keras.models import Sequential, load_model
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 
@@ -31,7 +31,7 @@ class Model():
 			input_dim = layer['input_dim'] if 'input_dim' in layer else None
 
 			if layer['type'] == 'dense':
-				self.model.add(Dense(neurons, activation=activation))
+				self.model.add(Dense(neurons,activation=activation))
 			if layer['type'] == 'lstm':
 				self.model.add(LSTM(neurons, input_shape=(input_timesteps, input_dim), return_sequences=return_seq))
 			if layer['type'] == 'dropout':
@@ -51,7 +51,13 @@ class Model():
 		print('[Model] %s epochs, %s batch size' % (epochs, batch_size))
 
 		# save_fname = 'saved_models/%s-e%s.h5' % (dt.datetime.now().strftime('%d%m%Y-%H%M%S'), str(epochs))
-		save_fname = 'saved_models/latest.h5'
+
+		#for sp500
+		save_fname = 'saved_models/tracker.h5'
+
+		#for tracker data
+		# save_fname = 'saved_models/tracker.h5'
+
 		callbacks = [
 			EarlyStopping(monitor='val_loss', patience=2),
 			ModelCheckpoint(filepath=save_fname, monitor='val_loss', save_best_only=True)

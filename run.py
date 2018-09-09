@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 from core.data_processor import DataLoader
 from core.model import Model
 
+import cleaner
 import sys
 
 configs = json.load(open('config.json', 'r'))
@@ -31,7 +32,7 @@ def plot_results_multiple(predicted_data, true_data, prediction_len):
     for i, data in enumerate(predicted_data):
         padding = [None for p in range(i * prediction_len)]
         plt.plot(padding + data, label='Prediction')
-        plt.legend()
+    plt.legend()
     plt.show()
 
 def main(choice):
@@ -80,7 +81,7 @@ def main(choice):
             plot_results_multiple(predictions, y_test, configs['data']['sequence_length'])
         elif (choice == "seq"):
             predictions = model.predict_sequence_full(x_test, configs['data']['sequence_length'])
-            plot_results_multiple(predictions, y_test, configs['data']['sequence_length'])
+            plot_results(predictions, y_test)
         else:
             predictions = model.predict_point_by_point(x_test)
             plot_results(predictions, y_test)
@@ -96,6 +97,9 @@ if __name__=='__main__':
 
 def predict(test):
     # initialize dataLoader with split of 0
+
+    cleaner.main_func()
+
     data = DataLoader(
         test,
         0,
@@ -103,10 +107,10 @@ def predict(test):
     )
     x_test, y_test = data.get_test_data(
         seq_len = configs['data']['sequence_length'],
-        normalise = configs['data']['normalise']
+        normalise = False
     )
     model = Model()
-    model.load_model('saved_models/latest.h5')
+    model.load_model('saved_models/tracker.h5')
     predictions = model.predict_point_by_point(x_test)
     plot_results(predictions, y_test)
     return "OK"
